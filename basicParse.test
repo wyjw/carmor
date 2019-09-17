@@ -1,0 +1,65 @@
+int main() {
+    float x; // @shield:level=high
+    float y; // @shield:level=high
+    printf(“%f”, x+y);
+    return 0;
+}
+
+// @shield:level = low
+float addFunc(float x, float y) {
+    return x + y;
+}
+
+// @shield:level = none
+float addFunc(float x, float y) {
+    return x + y;
+}
+
+float addFunc(float x, float y) {
+    return x + y;
+}
+
+// @shield:level = high
+float addFunc(float x, float y) {
+    return x + y;
+}
+
+struct coordinate_high {
+    float x; // @shield:level=high
+    float y; // @shield:level=high
+    time_t t; // @shield:level=low
+}
+
+int main() {
+    float x = 4.1; // @shield:level=low
+    float y; // @shield:level=high
+    y = x;
+}
+
+int main() {
+    (int *)x = 5; // @shield:level=high   
+    (int *)y; // @shield:level=low
+}
+
+// @shield:level = high | downgrade = precision;3 
+int addFunc(int x, int y) {
+    return x + y;
+}
+
+int main() {
+    int x = 4; // @shield:level = high | checkRange; 3,4
+}
+
+int main() {
+    int x = 5; // @shield:process = childLevel; 3
+}
+
+int main() {
+    int y = 87; // @shield:remote=restrict;low    
+}
+
+
+int main() {
+    int x = 4; // @shield:level = high |        checkRange; 3,4 |
+}
+
