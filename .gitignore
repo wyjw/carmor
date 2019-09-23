@@ -1,0 +1,8 @@
+*.o
+*.dylib
+*.so
+CMakeCache.txt
+cmake_install.cmake
+build/
+CMakeFiles/
+**/test/Output/

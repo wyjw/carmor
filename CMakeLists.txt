@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 2.8.8)
 
 project(simple_tool)
 
-option(BUILD_INTERFACE_CLASS_PRINTER "Build the tool that converts a C++ interface class into a C struct." ON)
-mark_as_advanced(BUILD_INTERFACE_CLASS_PRINTER)
-if (BUILD_INTERFACE_CLASS_PRINTER)
+option(TAINT_TYPE "Taint tool." ON)
+mark_as_advanced(TAINT_TYPE)
+if (TAINT_TYPE)
 
     # Find boost
     find_package(Boost COMPONENTS date_time REQUIRED)
