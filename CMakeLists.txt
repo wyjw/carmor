@@ -13,8 +13,9 @@ if (TAINT_TYPE)
     # Find LLVM Config binary for LLVM 3.5
     # If you're on debian, go to http://llvm.org/apt/ and install the development
     # release of LLVM (all packages).
+		find_program(LLVM_CONFIG_PATH "llvm-config")    
     if(NOT LLVM_CONFIG_PATH)
-        message(FATAL_ERROR "llvm-config-3.5 not found -- ${LLVM_CONFIG_PATH}")
+        message(FATAL_ERROR "llvm-config not found -- ${LLVM_CONFIG_PATH}")
     endif()
     message(STATUS "Found LLVM_CONFIG_PATH as ${LLVM_CONFIG_PATH}")
 
