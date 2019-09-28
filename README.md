@@ -23,8 +23,8 @@ This means that the addFunc can only be called on machine 1 and subFunc can only
 int main () {
   float x = 6.0; //@1
   float y = 7.0; //@1
-  x = addFunc(x,y)
-  x = subFunc(x,y)
+  x = addFunc(x,y) //@1
+  x = subFunc(x,y) //@2
   float *z = malloc(3 * sizeof(float)); //@1
   z[3] = 6.0; //@2
 }
