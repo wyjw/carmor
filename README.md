@@ -1,4 +1,4 @@
-### carmor
+# carmor
 
 ## Goal of project.
 The goal of our project is to partition programs based on annotations. This is usually the second part of a static analysis tool that has already decided on how to partition programs on a function granularity. This project actually does the partition of the program into different binaries, with remote procedural calls for communication between the binaries.
