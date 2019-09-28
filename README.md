@@ -27,9 +27,14 @@ int main () {
   x = subFunc(x,y)
 }
 ```
-Then what we have is that this would be equivalent to having two binaries as follows.
+Then what we have is that this would be equivalent to having two binaries as follows. Notice that functions are now moved to each machine and they are run on a particular machine.
 
 ```
+// @1
+float addFunc(float x, float y) {
+    return x + y;
+}
+
 // This is Machine 1.
 int main () {
   float x = 6.0;
@@ -39,6 +44,11 @@ int main () {
 ```
 
 ```
+// @2
+float subFunc(float x, float y) {
+    return x + y;
+}
+
 // This is Machine 2.
 int main () {
   rpc_call(x, ...); // This is a request for an element x from the other machine. This request could be rejected. 
