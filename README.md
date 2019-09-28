@@ -54,7 +54,9 @@ float subFunc(float x, float y) {
 
 // This is Machine 2.
 int main () {
-  rpc_call(x, ...); // This is a request for an element x from the other machine. This request could be rejected. 
+  rpc_retrieve(x, ...); // This is a request for an element x from the other machine. This request could be rejected. 
   x = subFunc(x,y);
-  rpc_heap_call(&z[3], ..., WRITE); // This is a request for the ability to write a value to a heap object on machine 1.
+  rpc_modify(&z[3], ..., WRITE); // This is a request for the ability to write a value to a heap object on machine 1.
 }
+```
+Note that all rpc calls can fail if the required communication is deemed not safe by either machine (like an unsecure machine asking for a secure heap array). 
