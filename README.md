@@ -4,7 +4,7 @@
 The goal of our project is to partition programs based on annotations. This is usually the second part of a static analysis tool that has already decided on how to partition programs on a function granularity. This project actually does the partition of the program into different binaries, with remote procedural calls for communication between the binaries.
 
 ## Example. 
-Inputs are given by source code and annotations at the function granularity and for non-local variables, at instantiation time. The annotations mostly state on which machine a particular program is run. 
+Inputs are given by source code and annotations at the function granularity and for non-local variables, at instantiation time. The annotations mostly state on which machine a particular program is run. For this example, ```//@1``` refers to a function that has to run the first machine. 
 
 ```
 // @1
