@@ -1,6 +1,7 @@
 *.o
 *.dylib
 *.so
+*.ast
 CMakeCache.txt
 cmake_install.cmake
 build/
