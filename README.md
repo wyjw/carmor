@@ -25,6 +25,8 @@ int main () {
   float y = 7.0; //@1
   x = addFunc(x,y)
   x = subFunc(x,y)
+  float *z = malloc(3 * sizeof(float)); //@1
+  z[3] = 6.0; //@2
 }
 ```
 Then what we have is that this would be equivalent to having two binaries as follows. Notice that functions are now moved to each machine and they are run on a particular machine.
@@ -40,6 +42,7 @@ int main () {
   float x = 6.0;
   float y = 7.0;
   x = addFunc(x,y);
+  float *z = malloc(3 * sizeof(float)); //@1
 }
 ```
 
@@ -53,4 +56,5 @@ float subFunc(float x, float y) {
 int main () {
   rpc_call(x, ...); // This is a request for an element x from the other machine. This request could be rejected. 
   x = subFunc(x,y);
+  rpc_heap_call(&z[3], ..., WRITE); // This is a request for the ability to write a value to a heap object on machine 1.
 }
