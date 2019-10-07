@@ -22,60 +22,120 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
-
 using namespace clang;
 using namespace clang::driver;
 using namespace clang::tooling;
 
 static llvm::cl::OptionCategory ToolingSampleCategory("Tooling Sample");
 
+bool GetMachineComment(Decl* d, std::string machineNum, ASTContext& ctx, SourceManager& sm) {
+
+  const RawComment* rc = d->getASTContext().getRawCommentForDeclNoCache(d);
+  if (rc)
+  {
+    SourceRange range = rc->getSourceRange();
+    PresumedLoc startPos = sm.getPresumedLoc(range.getBegin());
+    PresumedLoc endPos = sm.getPresumedLoc(range.getEnd());
+
+    std::string raw = rc->getRawText(sm);
+    std::string brief = rc->getBriefText(ctx);
+
+    if (raw.find(machineNum) != std::string::npos)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 // By implementing RecursiveASTVisitor, we can specify which AST nodes
 // we're interested in by overriding relevant methods.
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
-
-  bool VisitDecl(Decl* d)
+  bool VisitFunctionDecl(FunctionDecl* d)
   {
+    if (!d->isMain())
+    {
       ASTContext& ctx = d->getASTContext();
       SourceManager& sm = ctx.getSourceManager();
 
-      const RawComment* rc = d->getASTContext().getRawCommentForDeclNoCache(d);
-      if (rc)
-      {
-          std::cout << "found comment!" << '\n';
+      SourceRange ST_R = d->getSourceRange();
+      SourceLocation ST_B = d->getSourceRange().getBegin();
+      SourceLocation ST_E = d->getSourceRange().getEnd();
 
-          //Found comment!
-          SourceRange range = rc->getSourceRange();
-
-          PresumedLoc startPos = sm.getPresumedLoc(range.getBegin());
-          PresumedLoc endPos = sm.getPresumedLoc(range.getEnd());
-
-          std::string raw = rc->getRawText(sm);
-          std::string brief = rc->getBriefText(ctx);
-
-          // Debugging printouts
-          std::cout << "raw:" << raw << "\n";
-          std::cout << "brief:" << brief << "\n";
-
-          // ... Do something with positions or comments
-          if(raw.find("@1") != std::string::npos) {
-              std::cout << "found 1!" << '\n';
-          }
-          if (raw.find("@2") != std::string::npos) {
-              std::cout << "found 2!" << "\n";
-          }
+      if(GetMachineComment(d, "@1", ctx, sm)){
+        // here
       }
+      else
+      {
+        std::cout << ST_R.printToString(sm) << "\n";
+        std::cout << TheRewriter.RemoveText(ST_R) << "\n";
+        std::cout << TheRewriter.getRewrittenText(ST_R) << "\n";
+      }
+    }
 
-      // ...
-      return true;
+    return true;
   }
 
-  bool VisitFunctionDecl(FunctionDecl *f) {
-    // Only function definitions (with bodies), not declarations.
-    if (f->hasBody()) {
+  /*
+  bool VisitStmt(Stmt *s) {
+    ASTContext& ctx = s->getASTContext();
+    SourceManager& sm = ctx.getSourceMgr();
 
+    SourceRange ST_R = s->getSourceRange();
+    std::string _R = s->printToString();
+
+    raw.find(machineNum) != std::string::npo
+    if(GetMachineComment(d, "@1", ctx, sm)){
+      std::cout << "We have statement" << ST_R.printToString(sm) << "\n";
     }
+    else
+    {
+      std::cout
+    }
+
+    return true;
+  }
+  */
+
+  bool VisitVarDecl(VarDecl* d)
+  {
+
+    const DeclContext* _dc = d->getParentFunctionOrMethod();
+    if (_dc) {
+      if (_dc->isFunctionOrMethod())
+      {
+        FunctionDecl* f = FunctionDecl::castFromDeclContext(_dc);
+        std::cout << f->getNameInfo().getAsString() << "\n";
+        if (!f->isMain()) {
+          std::cout << "GOT HERE! 123";
+          return false;
+        }
+        std::cout << "DID WE GET HERE?\n";
+      }
+    }
+    std::cout << "GOT HERE! 12";
+
+    ASTContext& ctx = d->getASTContext();
+    SourceManager& sm = ctx.getSourceManager();
+
+    SourceRange ST_R = d->getSourceRange();
+    SourceLocation ST_B = d->getSourceRange().getBegin();
+    SourceLocation ST_E = d->getSourceRange().getEnd();
+    ST_R.setEnd(ST_E.getLocWithOffset(4));
+
+    if(GetMachineComment(d, "@1", ctx, sm)){
+      std::cout << "GOT HERE!";
+    }
+    else
+    {
+      std::cout << ST_R.printToString(sm) << "\n";
+      std::cout << TheRewriter.RemoveText(ST_R) << "\n";
+      std::cout << TheRewriter.getRewrittenText(ST_R) << "\n";
+    }
+
+    return true;
   }
 
 private:
@@ -108,27 +168,23 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
   void EndSourceFileAction() override {
-    SourceManager &SM1 = TheRewriter1.getSourceMgr();
-    SourceManager &SM2 = TheRewriter2.getSourceMgr();
+    SourceManager &SM = TheRewriter.getSourceMgr();
     llvm::errs() << "** EndSourceFileAction for: "
                  << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
     // Now emit the rewritten buffer.
-    TheRewriter1.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
-    TheRewriter2.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
+    TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef file) override {
     llvm::errs() << "** Creating AST consumer for: " << file << "\n";
-    TheRewriter1.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    TheRewriter2.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return std::make_unique<MyASTConsumer>(TheRewriter1, TheRewriter2);
+    TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+    return std::make_unique<MyASTConsumer>(TheRewriter);
   }
 
 private:
-  Rewriter TheRewriter1;
-  Rewriter TheRewriter2;
+  Rewriter TheRewriter;
 };
 
 int main(int argc, const char **argv) {

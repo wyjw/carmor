@@ -33,7 +33,7 @@ static llvm::cl::OptionCategory ToolingSampleCategory("Tooling Sample");
 // we're interested in by overriding relevant methods.
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 public:
-  MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
+  MyASTVisitor(Rewriter &R1, Rewriter &R2) : TheRewriter1(R1), TheRewriter2(R2) {}
 
   bool VisitDecl(Decl* d)
   {
@@ -71,22 +71,46 @@ public:
       return true;
   }
 
-  bool VisitFunctionDecl(FunctionDecl *f) {
+  bool VisitFunctionDecl(FunctionDecl *f)
+  {
     // Only function definitions (with bodies), not declarations.
     if (f->hasBody()) {
+      Stmt *FuncBody = f->getBody();
 
+      // Type name as string
+      QualType QT = f->getReturnType();
+      std::string TypeStr = QT.getAsString();
+
+      // Function name
+      DeclarationName DeclName = f->getNameInfo().getName();
+      std::string FuncName = DeclName.getAsString();
+
+      // Add comment before
+      std::stringstream SSBefore;
+      SSBefore << "// Begin function " << FuncName << " returning " << TypeStr
+               << "\n";
+      SourceLocation ST = f->getSourceRange().getBegin();
+      TheRewriter1.InsertText(ST, SSBefore.str(), true, true);
+
+      // And after
+      std::stringstream SSAfter;
+      SSAfter << "\n// End function " << FuncName;
+      ST = FuncBody->getEndLoc().getLocWithOffset(1);
+      TheRewriter2.InsertText(ST, SSAfter.str(), true, true);
     }
+    return true;
   }
 
 private:
-  Rewriter &TheRewriter;
+  Rewriter &TheRewriter1;
+  Rewriter &TheRewriter2;
 };
 
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R) : Visitor(R) {}
+  MyASTConsumer(Rewriter &R1, Rewriter &R2) : Visitor (R1, R2) {}
 
   // Override the method that gets called for each parsed top-level
   // declaration.
@@ -108,23 +132,29 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
   void EndSourceFileAction() override {
-    SourceManager &SM = TheRewriter.getSourceMgr();
+    SourceManager &SM1 = TheRewriter1.getSourceMgr();
+    SourceManager &SM2 = TheRewriter2.getSourceMgr();
     llvm::errs() << "** EndSourceFileAction for: "
-                 << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
+                 << SM1.getFileEntryForID(SM1.getMainFileID())->getName() << "\n";
+    llvm::errs() << "** EndSourceFileAction for: "
+                 << SM2.getFileEntryForID(SM2.getMainFileID())->getName() << "\n";
 
     // Now emit the rewritten buffer.
-    TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
+    TheRewriter1.getEditBuffer(SM1.getMainFileID()).write(llvm::outs());
+    TheRewriter2.getEditBuffer(SM2.getMainFileID()).write(llvm::outs());
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef file) override {
     llvm::errs() << "** Creating AST consumer for: " << file << "\n";
-    TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return std::make_unique<MyASTConsumer>(TheRewriter);
+    TheRewriter1.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+    TheRewriter2.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+    return std::make_unique<MyASTConsumer>(TheRewriter1, TheRewriter2);
   }
 
 private:
-  Rewriter TheRewriter;
+  Rewriter TheRewriter1;
+  Rewriter TheRewriter2;
 };
 
 int main(int argc, const char **argv) {
