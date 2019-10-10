@@ -13,7 +13,7 @@ if (TAINT_TYPE)
     # Find LLVM Config binary for LLVM 3.5
     # If you're on debian, go to http://llvm.org/apt/ and install the development
     # release of LLVM (all packages).
-    find_program(LLVM_CONFIG_PATH "llvm-config")
+    find_program(LLVM_CONFIG_PATH "llvm-config" PATHS "/usr/lib/llvm-9/bin" NO_DEFAULT_PATH)
     if(NOT LLVM_CONFIG_PATH)
         message(FATAL_ERROR "llvm-config not found -- ${LLVM_CONFIG_PATH}")
     endif()
@@ -47,7 +47,7 @@ if (TAINT_TYPE)
         set(${VARNAME} ${CONFIG_OUTPUT} PARENT_SCOPE)
 
         # Optionally output the configured value
-        message(STATUS "llvm_config-8(${VARNAME})=>${CONFIG_OUTPUT}")
+        message(STATUS "llvm_config(${VARNAME})=>${CONFIG_OUTPUT}")
 
         # cleanup
         unset(CONFIG_COMMAND)
@@ -73,8 +73,8 @@ if (TAINT_TYPE)
     # LD_LIBRARY_PATH=$(llvm-config-3.5 --libdir):$LD_LIBRARY_PATH make
     target_link_libraries(comment-tool
         ${LLVM_LDFLAGS}
-        -lLLVM
-        -lclangTooling
+	-lLLVM-9
+	-lclangTooling
         -lclangFrontendTool
         -lclangFrontend
         -lclangDriver

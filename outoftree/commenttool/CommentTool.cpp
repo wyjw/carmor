@@ -180,7 +180,7 @@ public:
                                                  StringRef file) override {
     llvm::errs() << "** Creating AST consumer for: " << file << "\n";
     TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return std::make_unique<MyASTConsumer>(TheRewriter);
+    return llvm::make_unique<MyASTConsumer>(TheRewriter);
   }
 
 private:
