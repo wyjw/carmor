@@ -133,8 +133,11 @@ void visitAllocationCallSites(llvm::Module *M)
 		{
 			for (auto I = BB->begin(); I != BB->end();)
 			{
+				//debug
 				auto nextIt = std::next(I);
-        printf("%s", I->getOpcodeName());
+				Instruction *ii = &*I;
+				ii->print(errs());
+				errs() << "\n";
 				if (CallInst* CI = dyn_cast<CallInst>(I))
 				{
 					Function* F_call = dyn_cast<Function>(CI->getCalledValue()->stripPointerCasts());

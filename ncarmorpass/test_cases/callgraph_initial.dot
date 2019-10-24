@@ -1,0 +1,7 @@
+digraph "Call Graph" {
+	label="Call Graph";
+
+	Node0x565558fe2760 [shape=record,shape=circle,label="{swap}"];
+	Node0x565558fe3000 [shape=record,shape=circle,label="{main|{<s0>1}}"];
+	Node0x565558fe3000:s0 -> Node0x565558fe2760[color=black];
+}
