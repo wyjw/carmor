@@ -8,6 +8,8 @@ set(CarmorPass_SOURCES
   Ncarmorpass.h
   Ncarmorpass.cpp)
 
+include_directories("../SVF/include")
+
 # CONFIGURE THE PLUGIN LIBRARIES
 # ==============================
 foreach( plugin ${LLVM_TUTOR_PLUGINS} )

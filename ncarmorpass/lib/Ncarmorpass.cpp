@@ -23,7 +23,7 @@
 //==============================================================================
 #include "Ncarmorpass.h"
 #include "Ratio.h"
-
+#include <stdio.h>
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -38,12 +38,18 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include "MemoryModel/PointerAnalysis.h"
+#include "WPA/Andersen.h"
+#include "WPA/FlowSensitive.h"
+#include "Util/SVFModule.h"
+
 #include <random>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mba-add"
 #define CARMOR_PREFIX "__carmor_"
+#define NDEBUG 0
 
 // Pass Option declaration
 static cl::opt<Ratio, false, llvm::cl::parser<Ratio>> MBARatio{
@@ -51,7 +57,7 @@ static cl::opt<Ratio, false, llvm::cl::parser<Ratio>> MBARatio{
     cl::desc("Only apply the mba pass on <ratio> of the candidates"),
     cl::value_desc("ratio"), cl::init(1.), cl::Optional};
 
-Module * M = nullptr;
+Module * GM = nullptr;
 
 //-----------------------------------------------------------------------------
 // Mem Intrinsic function (Replace with our own function)
@@ -60,7 +66,7 @@ Module * M = nullptr;
 Function *getMemIntrinsicFunction(MemIntrinsic *MI, StringRef name)
 {
   std::string functionName = CARMOR_PREFIX + name.str();
-  Function* F = M->getFunction(functionName);
+  Function* F = GM->getFunction(functionName);
 
   return F;
 }
@@ -94,6 +100,21 @@ void visitMemInstrinsic(MemIntrinsic *MI)
 //-----------------------------------------------------------------------------
 // Initialize Pointer Analysis
 //-----------------------------------------------------------------------------
+/*
+void initializePointerAnalysis()
+{
+  SVFModule svfModule(M);
+  PointerAnalysis* m_PTA = new AndersenWaveDiffWithType();
+  PAG* m_PAG = m_PTA->getPAG();
+  m_PAG->handleBlackHole(true);
+  m_PTA->analyze(svfModule);
+  m_PAG = m_PTA->getPAG();
+}
+*/
+//-----------------------------------------------------------------------------
+// Handle alloc functions
+//-----------------------------------------------------------------------------
+
 StringRef getAllocationFunctionName(StringRef name)
 {
   if (name.contains("malloc"))  return "malloc";
@@ -104,7 +125,7 @@ StringRef getAllocationFunctionName(StringRef name)
   return "";
 }
 
-void visitAllocationCallSites()
+void visitAllocationCallSites(llvm::Module *M)
 {
 	for (auto F = M->begin(), Fend = M->end(); F != Fend; ++F)
   {
@@ -113,6 +134,7 @@ void visitAllocationCallSites()
 			for (auto I = BB->begin(); I != BB->end();)
 			{
 				auto nextIt = std::next(I);
+        printf("%s", I->getOpcodeName());
 				if (CallInst* CI = dyn_cast<CallInst>(I))
 				{
 					Function* F_call = dyn_cast<Function>(CI->getCalledValue()->stripPointerCasts());
@@ -158,6 +180,20 @@ bool MBAAdd::runOnBasicBlock(BasicBlock &BB){
   }
 }
 
+bool MBAAdd::runOnFunction(llvm::Function &F){
+  bool Changed = false;
+  for (auto Inst = F.begin(), IE = F.end(); Inst != IE; ++Inst) {
+    if (AllocaInst* v = dyn_cast<AllocaInst>(Inst))
+    {
+
+    }
+    else{
+      continue;
+    }
+  }
+}
+
+
 PreservedAnalyses MBAAdd::run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &) {
   bool Changed = false;
@@ -169,12 +205,15 @@ PreservedAnalyses MBAAdd::run(llvm::Function &F,
                   : llvm::PreservedAnalyses::all());
 }
 
-bool LegacyMBAAdd::runOnFunction(llvm::Function &F) {
+bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
 
-  for (auto &BB : F) {
-    Changed |= Impl.runOnBasicBlock(BB);
+  GM = &AM;
+  for (auto &F : AM) {
+    Changed |= Impl.runOnFunction(F);
   }
+  visitAllocationCallSites(&AM);
+
   return Changed;
 }
 

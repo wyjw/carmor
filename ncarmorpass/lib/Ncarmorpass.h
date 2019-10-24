@@ -20,15 +20,16 @@ struct MBAAdd : public llvm::PassInfoMixin<MBAAdd> {
   llvm::PreservedAnalyses run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &);
   bool runOnBasicBlock(llvm::BasicBlock &B);
+  bool runOnFunction(llvm::Function &F);
 };
 
 //------------------------------------------------------------------------------
 // Legacy PM interface
 //------------------------------------------------------------------------------
-struct LegacyMBAAdd : public llvm::FunctionPass {
+struct LegacyMBAAdd : public llvm::ModulePass {
   static char ID;
-  LegacyMBAAdd() : FunctionPass(ID) {}
-  bool runOnFunction(llvm::Function &F) override;
+  LegacyMBAAdd() : ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M);
 
   MBAAdd Impl;
 };
