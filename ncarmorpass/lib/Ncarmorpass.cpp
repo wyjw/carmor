@@ -90,6 +90,47 @@ void visitMemInstrinsic(MemIntrinsic *MI)
   MI->eraseFromParent();
 }
 
+
+//-----------------------------------------------------------------------------
+// Initialize Pointer Analysis
+//-----------------------------------------------------------------------------
+StringRef getAllocationFunctionName(StringRef name)
+{
+  if (name.contains("malloc"))  return "malloc";
+  if (name.contains("calloc"))  return "calloc";
+  if (name.contains("realloc"))  return "realloc";
+  if (name.contains("memalign"))  return "memalign";
+  assert(false && "[ERROR] Invalid allocation function encouterned while trying to set annotation\n");
+  return "";
+}
+
+void visitAllocationCallSites()
+{
+	for (auto F = M->begin(), Fend = M->end(); F != Fend; ++F)
+  {
+		for (auto BB = F->begin(), BBend = F->end(); BB != BBend; ++BB)
+		{
+			for (auto I = BB->begin(); I != BB->end();)
+			{
+				auto nextIt = std::next(I);
+				if (CallInst* CI = dyn_cast<CallInst>(I))
+				{
+					Function* F_call = dyn_cast<Function>(CI->getCalledValue()->stripPointerCasts());
+					if (!F_call)
+					{
+						I = nextIt;
+						continue;
+					}
+					StringRef allocationFunctionName = getAllocationFunctionName(F_call->getName());
+					std::string cosmixAllocationFunctionName = CARMOR_PREFIX + allocationFunctionName.str() + "_";
+					Function* cosmixAllocationFunction = M->getFunction(cosmixAllocationFunctionName);
+          CI->setCalledFunction(cosmixAllocationFunction);
+        }
+				I = nextIt;
+		  }
+	 }
+  }
+}
 //-----------------------------------------------------------------------------
 // Initialize Pointer Analysis
 //-----------------------------------------------------------------------------
