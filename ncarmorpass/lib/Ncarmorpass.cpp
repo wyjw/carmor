@@ -1,0 +1,172 @@
+//==============================================================================
+// FILE:
+//    MBAAdd.cpp
+//
+// DESCRIPTION:
+//    This pass performs a substitution for 8-bit integer add
+//    instruction based on this Mixed Boolean-Airthmetic expression:
+//      a + b == (((a ^ b) + 2 * (a & b)) * 39 + 23) * 151 + 111
+//    See formula (3) in [1].
+//
+// USAGE:
+//    1. Legacy pass manager:
+//      $ opt -load <BUILD_DIR>/lib/libMBAAdd.so --legacy-mba-add [-mba-ratio=<ratio>] <bitcode-file>
+//      with the optional ratio in the range [0, 1.0].
+//    2. New pass maanger:
+//      $ opt -load-pass-plugin <BUILD_DIR>/lib/libMBAAdd.so -passes=-"mba-add" <bitcode-file>
+//      The command line option is not available for the new PM
+//
+// [1] "Defeating MBA-based Obfuscation" Ninon Eyrolles, Louis Goubin, Marion
+//     Videau
+//
+// License: MIT
+//==============================================================================
+#include "Ncarmorpass.h"
+#include "Ratio.h"
+
+#include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+#include <random>
+
+using namespace llvm;
+
+#define DEBUG_TYPE "mba-add"
+#define CARMOR_PREFIX "__carmor_"
+
+// Pass Option declaration
+static cl::opt<Ratio, false, llvm::cl::parser<Ratio>> MBARatio{
+    "mba-ratio",
+    cl::desc("Only apply the mba pass on <ratio> of the candidates"),
+    cl::value_desc("ratio"), cl::init(1.), cl::Optional};
+
+Module * M = nullptr;
+
+//-----------------------------------------------------------------------------
+// Mem Intrinsic function (Replace with our own function)
+//-----------------------------------------------------------------------------
+
+Function *getMemIntrinsicFunction(MemIntrinsic *MI, StringRef name)
+{
+  std::string functionName = CARMOR_PREFIX + name.str();
+  Function* F = M->getFunction(functionName);
+
+  return F;
+}
+
+void visitMemInstrinsic(MemIntrinsic *MI)
+{
+  IRBuilder<> IRB(MI);
+  if (isa<MemTransferInst>(MI))
+  {
+    auto memmove_args = {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+      IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
+      IRB.CreateIntCast(MI->getOperand(2), IRB.getInt64Ty(), false) };
+    IRB.CreateCall(
+      isa<MemMoveInst>(MI) ?
+        getMemIntrinsicFunction(MI, "memmove") :
+        getMemIntrinsicFunction(MI, "memcpy"),
+      memmove_args);
+  }
+  else if (isa<MemSetInst>(MI))
+  {
+    auto memset_args = {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+      IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
+      IRB.CreateIntCast(MI->getOperand(1), IRB.getInt64Ty(), false)};
+    IRB.CreateCall(getMemIntrinsicFunction(MI, "memset"), memset_args);
+  }
+
+  MI->eraseFromParent();
+}
+
+//-----------------------------------------------------------------------------
+// Initialize Pointer Analysis
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// Dataflow Analysis
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// MBAAdd Implementation
+//-----------------------------------------------------------------------------
+bool MBAAdd::runOnBasicBlock(BasicBlock &BB){
+  bool Changed = false;
+  for (auto Inst = BB.begin(), IE = BB.end(); Inst != IE; ++Inst) {
+    if (AllocaInst* v = dyn_cast<AllocaInst>(Inst))
+    {
+
+    }
+    else{
+      continue;
+    }
+  }
+}
+
+PreservedAnalyses MBAAdd::run(llvm::Function &F,
+                              llvm::FunctionAnalysisManager &) {
+  bool Changed = false;
+
+  for (auto &BB : F) {
+    Changed |= runOnBasicBlock(BB);
+  }
+  return (Changed ? llvm::PreservedAnalyses::none()
+                  : llvm::PreservedAnalyses::all());
+}
+
+bool LegacyMBAAdd::runOnFunction(llvm::Function &F) {
+  bool Changed = false;
+
+  for (auto &BB : F) {
+    Changed |= Impl.runOnBasicBlock(BB);
+  }
+  return Changed;
+}
+
+//-----------------------------------------------------------------------------
+// New PM Registration
+//-----------------------------------------------------------------------------
+llvm::PassPluginLibraryInfo getMBAAddPluginInfo() {
+  return {LLVM_PLUGIN_API_VERSION, "mba-add", LLVM_VERSION_STRING,
+          [](PassBuilder &PB) {
+            PB.registerPipelineParsingCallback(
+                [](StringRef Name, FunctionPassManager &FPM,
+                   ArrayRef<PassBuilder::PipelineElement>) {
+                  if (Name == "mba-add") {
+                    FPM.addPass(MBAAdd());
+                    return true;
+                  }
+                  return false;
+                });
+          }};
+}
+
+extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
+llvmGetPassPluginInfo() {
+  return getMBAAddPluginInfo();
+}
+
+//-----------------------------------------------------------------------------
+// Legacy PM Registration
+//-----------------------------------------------------------------------------
+char LegacyMBAAdd::ID = 0;
+
+static RegisterPass<LegacyMBAAdd> X("legacy-mba-add",
+                                    "Mixed Boolean Arithmetic Substitution",
+                                    true, // doesn't modify the CFG => true
+                                    false // not a pure analysis pass => false
+);
