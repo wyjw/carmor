@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD 14 CACHE STRING "")
 # for LT_LLVM_CMAKE_CONFIG_DIR
 #===============================================================================
 # Set this to a valid LLVM installation dir
-set(LT_LLVM_INSTALL_DIR "/usr/local" CACHE PATH "LLVM installation directory")
+set(LT_LLVM_INSTALL_DIR "/usr/lib/llvm-9/" CACHE PATH "LLVM installation directory")
 
 # Set this to a valid LLVM installation dir
 set(LT_LIT_TOOLS_DIR "" CACHE PATH "The location of tools required for testing

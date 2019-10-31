@@ -138,6 +138,7 @@ void visitAllocationCallSites(llvm::Module *M)
 				Instruction *ii = &*I;
 				ii->print(errs());
 				errs() << "\n";
+        errs() << "Visiting: ";
 				if (CallInst* CI = dyn_cast<CallInst>(I))
 				{
 					Function* F_call = dyn_cast<Function>(CI->getCalledValue()->stripPointerCasts());
@@ -170,6 +171,7 @@ void visitAllocationCallSites(llvm::Module *M)
 //-----------------------------------------------------------------------------
 // MBAAdd Implementation
 //-----------------------------------------------------------------------------
+/*
 bool MBAAdd::runOnBasicBlock(BasicBlock &BB){
   bool Changed = false;
   for (auto Inst = BB.begin(), IE = BB.end(); Inst != IE; ++Inst) {
@@ -182,10 +184,13 @@ bool MBAAdd::runOnBasicBlock(BasicBlock &BB){
     }
   }
 }
+*/
 
-bool MBAAdd::runOnFunction(llvm::Function &F){
+/*
+bool LegacyMBAAdd::runOnModule(llvm::Module &M){
+  errs() << "GOT TO RUN ON MODULE";
   bool Changed = false;
-  for (auto Inst = F.begin(), IE = F.end(); Inst != IE; ++Inst) {
+  for (auto Inst = M.begin(), IE = M.end(); Inst != IE; ++Inst) {
     if (AllocaInst* v = dyn_cast<AllocaInst>(Inst))
     {
 
@@ -195,42 +200,64 @@ bool MBAAdd::runOnFunction(llvm::Function &F){
     }
   }
 }
+*/
 
-
+/*
 PreservedAnalyses MBAAdd::run(llvm::Function &F,
                               llvm::FunctionAnalysisManager &) {
   bool Changed = false;
 
   for (auto &BB : F) {
+    errs() << "GOT HERE!";
     Changed |= runOnBasicBlock(BB);
   }
   return (Changed ? llvm::PreservedAnalyses::none()
                   : llvm::PreservedAnalyses::all());
 }
+*/
 
+/*
+class LegacyMBAAdd : public ModulePass
+{
+  public:
+    static char ID;
+
+  LegacyMBAAdd() : ModulePass(ID) {}
+
+  virtual bool runOnModule(Module &M)
+  {
+    errs() << "RUNNING PASS";
+  }
+}
+*/
+
+/*
 bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
+  errs() << "GOT HERE on Legacy RUn on MOdule\n";
 
   GM = &AM;
   for (auto &F : AM) {
+
     Changed |= Impl.runOnFunction(F);
   }
   visitAllocationCallSites(&AM);
 
   return Changed;
 }
+*/
 
+/*
 //-----------------------------------------------------------------------------
 // New PM Registration
 //-----------------------------------------------------------------------------
 llvm::PassPluginLibraryInfo getMBAAddPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "mba-add", LLVM_VERSION_STRING,
+  return {LLVM_PLUGIN_API_VERSION, "MbaAdd", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, FunctionPassManager &FPM,
-                   ArrayRef<PassBuilder::PipelineElement>) {
+            PB.registerAnalysisRegistrationCallback(
+                [](StringRef Name, ModuleAnalysisManager &MAM) {
                   if (Name == "mba-add") {
-                    FPM.addPass(MBAAdd());
+                    MAM.registerPass([&] {return });
                     return true;
                   }
                   return false;
@@ -238,10 +265,10 @@ llvm::PassPluginLibraryInfo getMBAAddPluginInfo() {
           }};
 }
 
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
+extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() {
   return getMBAAddPluginInfo();
 }
+*/
 
 //-----------------------------------------------------------------------------
 // Legacy PM Registration

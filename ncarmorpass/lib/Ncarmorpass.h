@@ -7,21 +7,28 @@
 //
 // License: MIT
 //==============================================================================
-#ifndef LLVM_TUTOR_MBA_ADD_H
-#define LLVM_TUTOR_MBA_ADD_H
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
+void visitor(llvm::Module &M) {
+    llvm::errs() << "Visiting: ";
+    llvm::errs() << M.getName() << " (takes ";
+}
+
+/*
 //------------------------------------------------------------------------------
 // New PM interface
 //------------------------------------------------------------------------------
 struct MBAAdd : public llvm::PassInfoMixin<MBAAdd> {
-  llvm::PreservedAnalyses run(llvm::Function &F,
-                              llvm::FunctionAnalysisManager &);
-  bool runOnBasicBlock(llvm::BasicBlock &B);
-  bool runOnFunction(llvm::Function &F);
+  llvm::PreservedAnalyses run(llvm::Module &M,
+                              llvm::ModuleAnalysisManager &){
+      visitor(M);
+      return llvm::PreservedAnalyses::all();
+  }
+  bool runOnModule(llvm::Module &M);
 };
+*/
 
 //------------------------------------------------------------------------------
 // Legacy PM interface
@@ -29,9 +36,8 @@ struct MBAAdd : public llvm::PassInfoMixin<MBAAdd> {
 struct LegacyMBAAdd : public llvm::ModulePass {
   static char ID;
   LegacyMBAAdd() : ModulePass(ID) {}
-  bool runOnModule(llvm::Module &M);
-
-  MBAAdd Impl;
+  bool runOnModule(llvm::Module &M) override {
+    llvm::errs() << "RUNNING MODULE\n";
+    return false;
+  };
 };
-
-#endif
