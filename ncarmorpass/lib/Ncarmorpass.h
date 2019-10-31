@@ -36,8 +36,11 @@ struct MBAAdd : public llvm::PassInfoMixin<MBAAdd> {
 struct LegacyMBAAdd : public llvm::ModulePass {
   static char ID;
   LegacyMBAAdd() : ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M);
+  /*
   bool runOnModule(llvm::Module &M) override {
     llvm::errs() << "RUNNING MODULE\n";
     return false;
   };
+  */
 };

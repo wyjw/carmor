@@ -96,6 +96,30 @@ void visitMemInstrinsic(MemIntrinsic *MI)
   MI->eraseFromParent();
 }
 
+//-----------------------------------------------------------------------------
+// Check if function is related to memory
+//-----------------------------------------------------------------------------
+
+bool isMemoryMappingFunction(Function * F)
+{
+  auto name = F->getName();
+  return name.equals("mmap") || name.equals("mmap64");
+}
+
+bool isDynamicAllocationFunction(Function * F)
+{
+  auto name = F->getName();
+  bool res = name.equals("malloc") ||
+             name.equals("calloc") ||
+             name.equals("realloc") ||
+             name.equals("memalign") ||
+             name.equals("je_malloc") ||
+             name.equals("je_calloc") ||
+             name.equals("tc_malloc") ||
+             name.equals("tc_calloc") ||
+             name.equals("tc_realloc");
+  return res;
+}
 
 //-----------------------------------------------------------------------------
 // Initialize Pointer Analysis
@@ -147,8 +171,10 @@ void visitAllocationCallSites(llvm::Module *M)
 						I = nextIt;
 						continue;
 					}
+          errs() << "Got here: \n";
 					StringRef allocationFunctionName = getAllocationFunctionName(F_call->getName());
-					std::string cosmixAllocationFunctionName = CARMOR_PREFIX + allocationFunctionName.str() + "_";
+          errs() << "here?" << allocationFunctionName << "\n";
+          std::string cosmixAllocationFunctionName = CARMOR_PREFIX + allocationFunctionName.str() + "_";
 					Function* cosmixAllocationFunction = M->getFunction(cosmixAllocationFunctionName);
           CI->setCalledFunction(cosmixAllocationFunction);
         }
@@ -230,22 +256,27 @@ class LegacyMBAAdd : public ModulePass
   }
 }
 */
+// This method implements what the pass does
+void visitor(Function &F) {
+    errs() << "Visiting: ";
+    errs() << F.getName() << " (takes ";
+    errs() << F.arg_size() << " args)\n";
+}
 
-/*
+
 bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
   errs() << "GOT HERE on Legacy RUn on MOdule\n";
 
   GM = &AM;
   for (auto &F : AM) {
-
-    Changed |= Impl.runOnFunction(F);
+    visitor(F);
+    //Changed |= Impl.runOnFunction(F);
   }
   visitAllocationCallSites(&AM);
 
   return Changed;
 }
-*/
 
 /*
 //-----------------------------------------------------------------------------
