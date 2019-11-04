@@ -21,6 +21,8 @@
 //
 // License: MIT
 //==============================================================================
+
+//
 #include "Ncarmorpass.h"
 #include "Ratio.h"
 #include <stdio.h>
@@ -121,6 +123,16 @@ bool isDynamicAllocationFunction(Function * F)
   return res;
 }
 
+bool isDynamicReallocationFunction(Function * F)
+{
+  auto name = F->getName();
+  bool res = name.equals("realloc") ||
+              name.equals("je_realloc") ||
+              name.equals("tc_realloc");
+  return res;
+
+}
+
 //-----------------------------------------------------------------------------
 // Initialize Pointer Analysis
 //-----------------------------------------------------------------------------
@@ -149,6 +161,17 @@ StringRef getAllocationFunctionName(StringRef name)
   return "";
 }
 
+FunctionType *getFuncTypes(llvm::Function *F)
+{
+	std::vector<Type*> ArgTypes;
+	for (const Argument &I : F->args())
+		//if (VMap.count(&I) == 0) // Maybe this works?
+			ArgTypes.push_back(I.getType());
+
+	FunctionType *FTy = FunctionType::get(F->getFunctionType()->getReturnType(), ArgTypes, F->getFunctionType()->isVarArg());
+	return FTy;
+}
+
 void visitAllocationCallSites(llvm::Module *M)
 {
 	for (auto F = M->begin(), Fend = M->end(); F != Fend; ++F)
@@ -171,18 +194,29 @@ void visitAllocationCallSites(llvm::Module *M)
 						I = nextIt;
 						continue;
 					}
-          errs() << "Got here: \n";
-					StringRef allocationFunctionName = getAllocationFunctionName(F_call->getName());
-          errs() << "here?" << allocationFunctionName << "\n";
-          std::string cosmixAllocationFunctionName = CARMOR_PREFIX + allocationFunctionName.str() + "_";
-					Function* cosmixAllocationFunction = M->getFunction(cosmixAllocationFunctionName);
-          CI->setCalledFunction(cosmixAllocationFunction);
+          if (isDynamicAllocationFunction(F_call))
+          {
+            errs() << "Got here: \n";
+  					StringRef allocationFunctionName = getAllocationFunctionName(F_call->getName());
+            errs() << "here?" << allocationFunctionName << "\n";
+            std::string cosmixAllocationFunctionName = CARMOR_PREFIX + allocationFunctionName.str() + "_";
+  					errs() << "should be replaced with" << cosmixAllocationFunctionName << "\n";//Function* cosmixAllocationFunction = M->getFunction(cosmixAllocationFunctionName);
+					  FunctionType *FT = getFuncTypes(F_call);
+					  Function *NewF = Function::Create(FT, F_call->getLinkage(), F_call->getAddressSpace(), cosmixAllocationFunctionName, F->getParent());
+  				  //Function *cosmixAllocationFunction = M->getOrInsertFunction(cosmixAllocationFunctionName);
+            //CI->setCalledFunction(cosmixAllocationFunction);
+            F_call->replaceAllUsesWith(NewF);
+            //NewF->setName(cosmixAllocationFunctionName);
+            F_call->eraseFromParent();
+            //CI->setCalledFunction(NewF);
+          }
         }
 				I = nextIt;
 		  }
 	 }
   }
 }
+
 //-----------------------------------------------------------------------------
 // Initialize Pointer Analysis
 //-----------------------------------------------------------------------------
@@ -192,7 +226,39 @@ void visitAllocationCallSites(llvm::Module *M)
 // Dataflow Analysis
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
+// Create new memory functions
+//-----------------------------------------------------------------------------
 
+void replaceMemFunction(std::string origFuncName, std::string replaceFuncName, llvm::Module *M)
+{
+  Function* origFunc = M->getFunction(origFuncName);
+  Function* replaceFunc = M->getFunction(replaceFuncName);
+  assert(origFunc);
+  assert(replaceFunc);
+
+  origFunc->replaceAllUsesWith(replaceFunc);
+}
+
+void createMemFunction(std::string origFuncName, std::string newFuncName, llvm::Module *M)
+{
+  Function* F = M->getFunction(origFuncName);
+  if (F)
+  {
+    Function::Create(cast<FunctionType>(F->getValueType()), GlobalValue::ExternalLinkage, newFuncName, M);
+  }
+}
+
+void replaceMemDeclarations(std::string functionName1, std::string functionName2, llvm::Module *M)
+{
+  Function* F1 = M->getFunction(functionName1);
+  Function* F2 = M->getFunction(functionName2);
+  assert(F1);
+  assert(F2);
+  if (F1 && F2){
+    F1->replaceAllUsesWith(F2);
+  }
+}
 
 //-----------------------------------------------------------------------------
 // MBAAdd Implementation
@@ -274,6 +340,8 @@ bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
     //Changed |= Impl.runOnFunction(F);
   }
   visitAllocationCallSites(&AM);
+  createMemFunction("malloc", "vvmalloc", &AM);
+  //replaceMemFunction("malloc", "vvmalloc", &AM);
 
   return Changed;
 }
