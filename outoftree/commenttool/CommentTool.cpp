@@ -11,6 +11,8 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <map>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -26,7 +28,12 @@ using namespace clang;
 using namespace clang::driver;
 using namespace clang::tooling;
 
+// Get the ability to add a filename to the tool.
 static llvm::cl::OptionCategory ToolingSampleCategory("Tooling Sample");
+static llvm::cl::opt<std::string> AnnoFile("anno", llvm::cl::cat(ToolingSampleCategory));
+
+// Global variable (probably bad practice, but do not want to mis-interact with libtooling)
+std::map<std::string, int> m;
 
 bool GetMachineComment(Decl* d, std::string machineNum, ASTContext& ctx, SourceManager& sm) {
 
@@ -64,6 +71,7 @@ public:
       SourceLocation ST_B = d->getSourceRange().getBegin();
       SourceLocation ST_E = d->getSourceRange().getEnd();
 
+      /*
       if(GetMachineComment(d, "@1", ctx, sm)){
         // here
       }
@@ -73,31 +81,11 @@ public:
         std::cout << TheRewriter.RemoveText(ST_R) << "\n";
         std::cout << TheRewriter.getRewrittenText(ST_R) << "\n";
       }
+      */
     }
 
     return true;
   }
-
-  /*
-  bool VisitStmt(Stmt *s) {
-    ASTContext& ctx = s->getASTContext();
-    SourceManager& sm = ctx.getSourceMgr();
-
-    SourceRange ST_R = s->getSourceRange();
-    std::string _R = s->printToString();
-
-    raw.find(machineNum) != std::string::npo
-    if(GetMachineComment(d, "@1", ctx, sm)){
-      std::cout << "We have statement" << ST_R.printToString(sm) << "\n";
-    }
-    else
-    {
-      std::cout
-    }
-
-    return true;
-  }
-  */
 
   bool VisitVarDecl(VarDecl* d)
   {
@@ -109,14 +97,10 @@ public:
         FunctionDecl* f = FunctionDecl::castFromDeclContext(_dc);
         std::cout << f->getNameInfo().getAsString() << "\n";
         if (!f->isMain()) {
-          std::cout << "GOT HERE! 123";
           return false;
         }
-        std::cout << "DID WE GET HERE?\n";
       }
     }
-    std::cout << "GOT HERE! 12";
-
     ASTContext& ctx = d->getASTContext();
     SourceManager& sm = ctx.getSourceManager();
 
@@ -125,6 +109,7 @@ public:
     SourceLocation ST_E = d->getSourceRange().getEnd();
     ST_R.setEnd(ST_E.getLocWithOffset(4));
 
+    /*
     if(GetMachineComment(d, "@1", ctx, sm)){
       std::cout << "GOT HERE!";
     }
@@ -134,6 +119,7 @@ public:
       std::cout << TheRewriter.RemoveText(ST_R) << "\n";
       std::cout << TheRewriter.getRewrittenText(ST_R) << "\n";
     }
+    */
 
     return true;
   }
@@ -169,9 +155,10 @@ public:
   MyFrontendAction() {}
   void EndSourceFileAction() override {
     SourceManager &SM = TheRewriter.getSourceMgr();
+    /*
     llvm::errs() << "** EndSourceFileAction for: "
                  << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-
+    */
     // Now emit the rewritten buffer.
     TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
@@ -191,6 +178,21 @@ int main(int argc, const char **argv) {
   CommonOptionsParser op(argc, argv, ToolingSampleCategory);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
+  llvm::errs() << AnnoFile.getValue() << "\n";
+  std::ifstream infile(AnnoFile.getValue());
+  std::string a;
+  int b;
+  while (infile >> a >> b)
+  {
+    m[a] = b;
+  }
+
+  /*
+  for (auto elem : m)
+  {
+    std::cout << elem.first << " " << elem.second << "\n";
+  }
+  */
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
   // create new objects implementing the FrontendAction interface. Here we use
   // the helper newFrontendActionFactory to create a default factory that will
