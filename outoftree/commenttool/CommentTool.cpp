@@ -35,6 +35,7 @@ static llvm::cl::opt<std::string> AnnoFile("anno", llvm::cl::cat(ToolingSampleCa
 // Global variable (probably bad practice, but do not want to mis-interact with libtooling)
 std::map<std::string, int> m;
 
+/*
 bool GetMachineComment(Decl* d, std::string machineNum, ASTContext& ctx, SourceManager& sm) {
 
   const RawComment* rc = d->getASTContext().getRawCommentForDeclNoCache(d);
@@ -54,6 +55,7 @@ bool GetMachineComment(Decl* d, std::string machineNum, ASTContext& ctx, SourceM
   }
   return false;
 }
+*/
 
 // By implementing RecursiveASTVisitor, we can specify which AST nodes
 // we're interested in by overriding relevant methods.
@@ -71,6 +73,8 @@ public:
       SourceLocation ST_B = d->getSourceRange().getBegin();
       SourceLocation ST_E = d->getSourceRange().getEnd();
 
+      FunctionDecl* f_def = d->getDefinition();
+      TheRewriter.InsertTextBefore(ST_B, "__attribute__((annotate(" + std::to_string(m[d->getNameInfo().getAsString()]) + "))) ");
       /*
       if(GetMachineComment(d, "@1", ctx, sm)){
         // here
@@ -155,10 +159,6 @@ public:
   MyFrontendAction() {}
   void EndSourceFileAction() override {
     SourceManager &SM = TheRewriter.getSourceMgr();
-    /*
-    llvm::errs() << "** EndSourceFileAction for: "
-                 << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-    */
     // Now emit the rewritten buffer.
     TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
