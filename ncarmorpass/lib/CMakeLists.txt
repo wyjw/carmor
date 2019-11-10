@@ -43,6 +43,15 @@ foreach( plugin ${LLVM_TUTOR_PLUGINS} )
       ${plugin}
       "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>"
       )
+
+
+    llvm_map_components_to_libnames(llvm_libs core bitwriter ipo irreader instcombine instrumentation target linker analysis scalaropts support )
+
+    #target_link_libraries( ${plugin} LLVMSvf LLVMCudd ${llvm_libs} )
+    target_link_libraries( ${plugin} LLVMSvf LLVMCudd )
+
+    set_target_properties( ${plugin} PROPERTIES
+                          RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
 endforeach()
 
 # CONFIGURE LIBRARIES FOR 'dynamic'

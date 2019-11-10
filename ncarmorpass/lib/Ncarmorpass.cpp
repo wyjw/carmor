@@ -61,6 +61,25 @@ static cl::opt<Ratio, false, llvm::cl::parser<Ratio>> MBARatio{
 
 Module * GM = nullptr;
 
+PointerAnalysis *m_PTA = nullptr;
+PAG *m_PAG = nullptr;
+
+
+// Initialize pointer Analysis
+
+void initializePointerAnalysis()
+{
+  SVFModule svfModule(GM);
+  m_PTA = new AndersenWaveDiffWithType();
+  m_PTA->disablePrintStat();
+  m_PAG = m_PTA->getPAG();
+  m_PAG->handleBlackHole(true);
+
+  m_PTA->analyze(svfModule);
+  m_PAG = m_PTA->getPAG();
+  llvm::errs() << "POINTER ANALYSIS\n";
+}
+
 //-----------------------------------------------------------------------------
 // Mem Intrinsic function (Replace with our own function)
 //-----------------------------------------------------------------------------
@@ -374,7 +393,7 @@ bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
   errs() << "GOT HERE on Legacy RUn on MOdule\n";
 
-
+  //initializePointerAnalysis();
   addAnnotations(&AM);
   GM = &AM;
   for (auto &F : AM) {
