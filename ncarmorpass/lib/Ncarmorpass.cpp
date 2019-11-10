@@ -260,6 +260,46 @@ void replaceMemDeclarations(std::string functionName1, std::string functionName2
   }
 }
 
+// Fill in annotations
+void addAnnotations(llvm::Module *M)
+{
+  auto global_annos = M->getNamedGlobal("llvm.global.annotations");
+  if (global_annos)
+  {
+    auto a = cast<ConstantArray>(global_annos->getOperand(0));
+    for (int i=0; i < a->getNumOperands(); i++){
+      auto e = cast<ConstantStruct>(a->getOperand(i));
+
+    	if (auto fn = dyn_cast<Function>(e->getOperand(0)->getOperand(0))){
+    	  auto anno = cast<ConstantDataArray>(cast<GlobalVariable>(e->getOperand(1)->getOperand(0))->getOperand(0))->getAsCString();
+        fn->addFnAttr(anno);
+    	}
+    }
+  }
+}
+
+void doWithAnnotations(llvm::Module *M)
+{
+  for (auto F = M->begin(), Fend = M->end(); F != Fend; ++F){
+      for (auto attr : F->getAttributes())
+      {
+        auto _attr = attr.getAsString();
+        std::string pattern = "carmorsplit_";
+      	llvm::errs() << _attr << "\n";
+        if (_attr.find(pattern) != std::string::npos)
+        {
+          std::string a = _attr.substr(_attr.find(pattern) + pattern.length(), 1);
+          llvm::errs() << "we have value\n" << a << "\n";
+        }
+      	/*
+      	if (F->hasFnAttribute("1"))
+        {
+          llvm::errs() << F->getName() << " has my attribute!\n";
+        }*/
+      }
+  }
+}
+
 //-----------------------------------------------------------------------------
 // MBAAdd Implementation
 //-----------------------------------------------------------------------------
@@ -334,11 +374,14 @@ bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
   errs() << "GOT HERE on Legacy RUn on MOdule\n";
 
+
+  addAnnotations(&AM);
   GM = &AM;
   for (auto &F : AM) {
     visitor(F);
     //Changed |= Impl.runOnFunction(F);
   }
+  doWithAnnotations(&AM);
   visitAllocationCallSites(&AM);
   createMemFunction("malloc", "vvmalloc", &AM);
   //replaceMemFunction("malloc", "vvmalloc", &AM);

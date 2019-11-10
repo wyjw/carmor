@@ -3,81 +3,87 @@ source_filename = "llvm-link"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-@.str = private unnamed_addr constant [15 x i8] c"tutorialspoint\00", align 1
-@.str.1 = private unnamed_addr constant [28 x i8] c"String = %s,  Address = %u\0A\00", align 1
-@.str.2 = private unnamed_addr constant [5 x i8] c".com\00", align 1
+@llvm.global.annotations = appending global [2 x { i8*, i8*, i8*, i32 }] [{ i8*, i8*, i8*, i32 } { i8* bitcast (i32 (i32)* @sub_one to i8*), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str.1, i32 0, i32 0), i32 1 }, { i8*, i8*, i8*, i32 } { i8* bitcast (i32 (i32)* @add_one to i8*), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.2, i32 0, i32 0), i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str.1, i32 0, i32 0), i32 5 }], section "llvm.metadata"
+@.str = private unnamed_addr constant [14 x i8] c"carmorsplit_1\00", section "llvm.metadata"
+@.str.1 = private unnamed_addr constant [37 x i8] c"../../outoftree/commenttool/split2.c\00", section "llvm.metadata"
+@.str.2 = private unnamed_addr constant [14 x i8] c"carmorsplit_0\00", section "llvm.metadata"
 @.str.3 = private unnamed_addr constant [38 x i8] c"This is the changed malloc of size %d\00", align 1
-@.str.1.6 = private unnamed_addr constant [39 x i8] c"This is the changed realloc of size %d\00", align 1
+@.str.1.4 = private unnamed_addr constant [39 x i8] c"This is the changed realloc of size %d\00", align 1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @main() #0 {
+define dso_local i32 @sub_one(i32) #0 {
+  %2 = alloca i32, align 4
+  store i32 %0, i32* %2, align 4
+  %3 = load i32, i32* %2, align 4
+  %4 = sub nsw i32 %3, 1
+  ret i32 %4
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @add_one(i32) #1 {
+  %2 = alloca i32, align 4
+  store i32 %0, i32* %2, align 4
+  %3 = load i32, i32* %2, align 4
+  %4 = add nsw i32 %3, 1
+  ret i32 %4
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @main() #2 {
   %1 = alloca i32, align 4
-  %2 = alloca i8*, align 8
-  store i32 0, i32* %1, align 4
-  %3 = call noalias i8* @__carmor_malloc_(i64 15) #3
-  store i8* %3, i8** %2, align 8
-  %4 = load i8*, i8** %2, align 8
-  %5 = call i8* @strcpy(i8* %4, i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str, i64 0, i64 0))
-  %6 = load i8*, i8** %2, align 8
-  %7 = load i8*, i8** %2, align 8
-  %8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([28 x i8], [28 x i8]* @.str.1, i64 0, i64 0), i8* %6, i8* %7)
-  %9 = load i8*, i8** %2, align 8
-  %10 = call i8* @__carmor_realloc_(i8* %9, i64 25) #3
-  store i8* %10, i8** %2, align 8
-  %11 = load i8*, i8** %2, align 8
-  %12 = call i8* @strcat(i8* %11, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i64 0, i64 0))
-  %13 = load i8*, i8** %2, align 8
-  %14 = load i8*, i8** %2, align 8
-  %15 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([28 x i8], [28 x i8]* @.str.1, i64 0, i64 0), i8* %13, i8* %14)
-  %16 = load i8*, i8** %2, align 8
-  call void @free(i8* %16) #3
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  store i32 4, i32* %1, align 4
+  store i32 5, i32* %2, align 4
+  %5 = load i32, i32* %1, align 4
+  %6 = call i32 @add_one(i32 %5)
+  store i32 %6, i32* %3, align 4
+  %7 = load i32, i32* %2, align 4
+  %8 = call i32 @sub_one(i32 %7)
+  store i32 %8, i32* %4, align 4
   ret i32 0
 }
 
-declare dso_local i8* @strcpy(i8*, i8*) #1
-
-declare dso_local i32 @printf(i8*, ...) #1
-
-declare dso_local i8* @strcat(i8*, i8*) #1
-
-; Function Attrs: nounwind
-declare dso_local void @free(i8*) #2
-
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i8* @__carmor_malloc_(i64) #0 {
+define dso_local i8* @__carmor_malloc_(i64) #2 {
   %2 = alloca i64, align 8
   store i64 %0, i64* %2, align 8
   %3 = load i64, i64* %2, align 8
   %4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([38 x i8], [38 x i8]* @.str.3, i64 0, i64 0), i64 %3)
   %5 = load i64, i64* %2, align 8
-  %6 = call noalias i8* @malloc(i64 %5) #3
+  %6 = call noalias i8* @malloc(i64 %5) #5
   ret i8* %6
 }
 
+declare dso_local i32 @printf(i8*, ...) #3
+
 ; Function Attrs: nounwind
-declare dso_local noalias i8* @malloc(i64) #2
+declare dso_local noalias i8* @malloc(i64) #4
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i8* @__carmor_realloc_(i8*, i64) #0 {
+define dso_local i8* @__carmor_realloc_(i8*, i64) #2 {
   %3 = alloca i8*, align 8
   %4 = alloca i64, align 8
   store i8* %0, i8** %3, align 8
   store i64 %1, i64* %4, align 8
   %5 = load i64, i64* %4, align 8
-  %6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([39 x i8], [39 x i8]* @.str.1.6, i64 0, i64 0), i64 %5)
+  %6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([39 x i8], [39 x i8]* @.str.1.4, i64 0, i64 0), i64 %5)
   %7 = load i8*, i8** %3, align 8
   %8 = load i64, i64* %4, align 8
-  %9 = call i8* @realloc(i8* %7, i64 %8) #3
+  %9 = call i8* @realloc(i8* %7, i64 %8) #5
   ret i8* %9
 }
 
 ; Function Attrs: nounwind
-declare dso_local i8* @realloc(i8*, i64) #2
+declare dso_local i8* @realloc(i8*, i64) #4
 
-attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
+attributes #0 = { noinline nounwind optnone uwtable "carmorsplit_1" "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { noinline nounwind optnone uwtable "carmorsplit_0" "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { nounwind }
 
 !llvm.ident = !{!0, !0}
 !llvm.module.flags = !{!1}

@@ -5,6 +5,13 @@ void swap(char **p, char **q){
        *p = *q;
        *q = t;
 }
+
+void swap2(char **p, char **q){
+  char* t = *p;
+  	*p = *q;
+	*q = t;
+}
+
 int main(){
       char a1, b1;
       char *a = &a1;
