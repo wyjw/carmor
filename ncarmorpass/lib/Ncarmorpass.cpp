@@ -75,7 +75,7 @@ Function *getMemIntrinsicFunction(MemIntrinsic *MI, StringRef name)
 
 void visitMemInstrinsic(MemIntrinsic *MI)
 {
-  IRBuilder<> IRB(MI);
+  llvm::IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI))
   {
     auto memmove_args = {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
