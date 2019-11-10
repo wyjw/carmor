@@ -67,10 +67,10 @@ PAG *m_PAG = nullptr;
 
 // Initialize pointer Analysis
 
-void initializePointerAnalysis()
+void initializePointerAnalysis(llvm::Module *M)
 {
-  SVFModule svfModule(GM);
-  m_PTA = new AndersenWaveDiffWithType();
+  SVFModule svfModule(*M);
+  m_PTA = new AndersenWaveDiff();
   m_PTA->disablePrintStat();
   m_PAG = m_PTA->getPAG();
   m_PAG->handleBlackHole(true);
@@ -393,9 +393,9 @@ bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
   errs() << "GOT HERE on Legacy RUn on MOdule\n";
 
-  //initializePointerAnalysis();
-  addAnnotations(&AM);
   GM = &AM;
+  initializePointerAnalysis(&AM);
+  addAnnotations(&AM);
   for (auto &F : AM) {
     visitor(F);
     //Changed |= Impl.runOnFunction(F);
