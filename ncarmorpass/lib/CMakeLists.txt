@@ -6,7 +6,12 @@ set(LLVM_TUTOR_PLUGINS
 
 set(CarmorPass_SOURCES
   Ncarmorpass.h
-  Ncarmorpass.cpp)
+  Ncarmorpass.cpp
+  mem.h
+  mem.c
+  shadow_metadata_table.c
+  shadow_metadata_table.h
+  )
 
 include_directories("../SVF/include")
 

@@ -5,13 +5,13 @@ int main () {
    char *str;
 
    /* Initial memory allocation */
-   str = (char *) malloc(15);
-   strcpy(str, "tutorialspoint");
+   str = (char *) malloc(11);
+   strcpy(str, "hello world");
    printf("String = %s,  Address = %u\n", str, str);
 
    /* Reallocating memory */
-   str = (char *) realloc(str, 25);
-   strcat(str, ".com");
+   str = (char *) realloc(str, 11);
+   strcat(str, "hello world");
    printf("String = %s,  Address = %u\n", str, str);
 
    free(str);

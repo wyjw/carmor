@@ -74,7 +74,7 @@ public:
       SourceLocation ST_E = d->getSourceRange().getEnd();
 
       FunctionDecl* f_def = d->getDefinition();
-      TheRewriter.InsertTextBefore(ST_B, "__attribute__((annotate(" + std::to_string(m[d->getNameInfo().getAsString()]) + "))) ");
+      TheRewriter.InsertTextBefore(ST_B, "__attribute__((annotate(\"carmorsplit_" + std::to_string(m[d->getNameInfo().getAsString()]) + "\"))) ");
       /*
       if(GetMachineComment(d, "@1", ctx, sm)){
         // here
@@ -99,7 +99,7 @@ public:
       if (_dc->isFunctionOrMethod())
       {
         FunctionDecl* f = FunctionDecl::castFromDeclContext(_dc);
-        std::cout << f->getNameInfo().getAsString() << "\n";
+        //std::cout << f->getNameInfo().getAsString() << "\n";
         if (!f->isMain()) {
           return false;
         }

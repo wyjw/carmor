@@ -105,7 +105,26 @@ message("LLVM STATUS:
 # Now set the LLVM header and library paths:
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
+#link_directories(LLVM)
 add_definitions(${LLVM_DEFINITIONS})
+
+set(ENV{SVF_HOME} "/home/ywu/restricted/carmor/ncarmorpass/replace-w/ncarmorpass/SVF")
+
+if (DEFINED ENV{SVF_HOME})
+    message(STATUS "SVF_HOME: $ENV{SVF_HOME}")
+    set(SVF_HEADER "$ENV{SVF_HOME}/include")
+    set(SVF_LIB "$ENV{SVF_HOME}/Release-build/lib")
+    if (EXISTS "${SVF_HEADER}" AND EXISTS "${SVF_LIB}")
+        message(STATUS "SVF_HEADER: ${SVF_HEADER}")
+        message(STATUS "SVF_LIB: ${SVF_LIB}")
+    else()
+        message(FATAL_ERROR "${SVF_LIB} or ${SVF_HEADER} not exists")
+    endif()
+    include_directories(${SVF_HEADER})
+    link_directories(${SVF_LIB} ${SVF_LIB}/CUDD)
+else()
+    message(FATAL_ERROR "Please point SVF_HOME to your SVF source folder")
+endif()
 
 #===============================================================================
 # 3. ADD SUBDIRECTORIES
