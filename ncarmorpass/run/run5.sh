@@ -3,4 +3,4 @@
 /usr/lib/llvm-9/bin/clang -emit-llvm ../lib/mem.c -S -o out2.ll
 /usr/lib/llvm-9/bin/llvm-link -S out_.ll out2.ll > out3.ll
 /usr/lib/llvm-9/bin/llc -filetype=obj out3.ll
-g++ -no-pie out3.o
+clang++ -no-pie out3.o
