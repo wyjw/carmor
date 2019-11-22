@@ -51,6 +51,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mba-add"
 #define CARMOR_PREFIX "__carmor_"
+#define GENERIC_ANNOTATION_SYMBOL "generic"
 #define NDEBUG 0
 
 // Pass Option declaration
@@ -59,40 +60,85 @@ static cl::opt<Ratio, false, llvm::cl::parser<Ratio>> MBARatio{
     cl::desc("Only apply the mba pass on <ratio> of the candidates"),
     cl::value_desc("ratio"), cl::init(1.), cl::Optional};
 
-Module * GM = nullptr;
-
-PointerAnalysis *m_PTA = nullptr;
-PAG *m_PAG = nullptr;
-
-
 // Initialize pointer Analysis
-
-void initializePointerAnalysis(llvm::Module *M)
+void initializePointerAnalysis(llvm::Module *M, PointerAnalysis *m_PTA, PAG *m_PAG, SVFModule *svfModule)
 {
-  SVFModule svfModule(*M);
   m_PTA = new AndersenWaveDiff();
   m_PTA->disablePrintStat();
   m_PAG = m_PTA->getPAG();
   m_PAG->handleBlackHole(true);
 
-  m_PTA->analyze(svfModule);
+  m_PTA->analyze(*svfModule);
   m_PAG = m_PTA->getPAG();
   llvm::errs() << "POINTER ANALYSIS\n";
 }
 
+void runDataFlowAnalysis(llvm::Module *M, DenseMap<NodeID, std::string> m_ValuesToInstrumentMap,
+  DenseMap<Value*, std::string> m_AnnotatedVars, bool debug_print, PAG *m_PAG, PointerAnalysis *m_PTA)
+{
+  errs() << "DATAFLOW ANALYSIS\n";
+
+  for (auto kvp : m_AnnotatedVars)
+  {
+    errs() << "KVP's first argument is: " << kvp.first;
+    errs() << "KVP's second argument is: " << kvp.second;
+    Value* annotatedVar = kvp.first;
+
+    if (debug_print)
+    {
+      errs() << "Debugging [Running Pointer Analysis]";
+      annotatedVar->print(errs(), true);
+    }
+
+    uint targetNode = m_PAG->getValueNode(annotatedVar);
+
+    auto cnt = m_ValuesToInstrumentMap.count(targetNode);
+    if (cnt == 0 || (cnt == 1 && m_ValuesToInstrumentMap[targetNode] == kvp.second))
+    {
+      m_ValuesToInstrumentMap[targetNode] = kvp.second;
+    }
+    else
+    {
+      m_ValuesToInstrumentMap[targetNode] = GENERIC_ANNOTATION_SYMBOL;
+    }
+  }
+
+  for (auto nIter = m_PTA->getAllValidPtrs().begin(); nIter != m_PTA->getAllValidPtrs().end(); ++nIter)
+  {
+    for (auto kvp : m_AnnotatedVars)
+    {
+      Value * annotatedVar = kvp.first;
+      uint targetNode = m_PAG->getValueNode(annotatedVar);
+
+      if (m_PTA->alias(*nIter, targetNode) != NoAlias)
+      {
+        auto cnt = m_ValuesToInstrumentMap.count(targetNode);
+        if (cnt == 0 || (cnt == 1 && m_ValuesToInstrumentMap[targetNode] == kvp.second))
+        {
+          m_ValuesToInstrumentMap[*nIter] = kvp.second;
+        }
+        else
+        {
+          m_ValuesToInstrumentMap[*nIter] = GENERIC_ANNOTATION_SYMBOL;
+        }
+      }
+    }
+  }
+}
 //-----------------------------------------------------------------------------
+
 // Mem Intrinsic function (Replace with our own function)
 //-----------------------------------------------------------------------------
 
-Function *getMemIntrinsicFunction(MemIntrinsic *MI, StringRef name)
+Function *getMemIntrinsicFunction(llvm::Module *M, MemIntrinsic *MI, StringRef name)
 {
   std::string functionName = CARMOR_PREFIX + name.str();
-  Function* F = GM->getFunction(functionName);
+  Function* F = M->getFunction(functionName);
 
   return F;
 }
 
-void visitMemInstrinsic(MemIntrinsic *MI)
+void visitMemInstrinsic(llvm::Module *M, MemIntrinsic *MI)
 {
   llvm::IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI))
@@ -102,8 +148,8 @@ void visitMemInstrinsic(MemIntrinsic *MI)
       IRB.CreateIntCast(MI->getOperand(2), IRB.getInt64Ty(), false) };
     IRB.CreateCall(
       isa<MemMoveInst>(MI) ?
-        getMemIntrinsicFunction(MI, "memmove") :
-        getMemIntrinsicFunction(MI, "memcpy"),
+        getMemIntrinsicFunction(M, MI, "memmove") :
+        getMemIntrinsicFunction(M, MI, "memcpy"),
       memmove_args);
   }
   else if (isa<MemSetInst>(MI))
@@ -111,7 +157,7 @@ void visitMemInstrinsic(MemIntrinsic *MI)
     auto memset_args = {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
       IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
       IRB.CreateIntCast(MI->getOperand(1), IRB.getInt64Ty(), false)};
-    IRB.CreateCall(getMemIntrinsicFunction(MI, "memset"), memset_args);
+    IRB.CreateCall(getMemIntrinsicFunction(M, MI, "memset"), memset_args);
   }
 
   MI->eraseFromParent();
@@ -309,6 +355,7 @@ void doWithAnnotations(llvm::Module *M)
         {
           std::string a = _attr.substr(_attr.find(pattern) + pattern.length(), 1);
           llvm::errs() << "we have value\n" << a << "\n";
+          //RegisterInTable(&M, m_ValuesToInstrumentMap, m_AnnotatedVars);
         }
       	/*
       	if (F->hasFnAttribute("1"))
@@ -318,6 +365,43 @@ void doWithAnnotations(llvm::Module *M)
       }
   }
 }
+
+void getVarMetadata(llvm::Module *M, DenseMap<NodeID, std::string> m_ValuesToInstrumentMap,
+  DenseMap<Value*, std::string> m_AnnotatedVars, bool debug_print, PAG *m_PAG, PointerAnalysis *m_PTA)
+{
+  for (auto F = M->begin(), Fend = M->end(); F != Fend; ++F)
+  {
+    for (auto BB = F->begin(), BBend = F->end(); BB != BBend; ++BB)
+    {
+      for (auto I = BB->begin(); I != BB->end(); I++)
+      {
+        if (CallInst* CI = dyn_cast<CallInst>(I))
+        {
+          // TODO: Not sure if this is the right value that we want
+          Value *v = CI->getArgOperand(0);
+          // Register in the table
+          //assert(m_PAG->hasValueNode(v));
+          NodeID targetNode = m_PAG->getValueNode(v);
+          //m_ValuesToInstrumentMap[targetNode] = v;
+          llvm::errs() << "value node is \n" << m_ValuesToInstrumentMap[targetNode] << "\n";
+        }
+      }
+    }
+  }
+}
+
+/*
+void visitDeclarationAnnotations(){
+
+}
+*/
+/*
+void RegisterInTable(llvm::Module *M, DenseMap<uint, std::string> values,
+  DenseMap<Value*, std::string> vars)
+{
+  values[];
+}
+*/
 
 //-----------------------------------------------------------------------------
 // MBAAdd Implementation
@@ -393,16 +477,31 @@ bool LegacyMBAAdd::runOnModule(llvm::Module &AM) {
   bool Changed = false;
   errs() << "GOT HERE on Legacy RUn on MOdule\n";
 
+  Module * GM = nullptr;
+  bool debug = true;
   GM = &AM;
-  initializePointerAnalysis(&AM);
+
+  PointerAnalysis *m_PTA = nullptr;
+  PAG *m_PAG = nullptr;
+  SVFModule svfModule(AM);
+
+  initializePointerAnalysis(&AM, m_PTA, m_PAG, &svfModule);
+
+  // Annotated parts
   addAnnotations(&AM);
+  DenseMap<NodeID, std::string> m_ValuesToInstrumentMap;
+  DenseMap<Value*, std::string> m_AnnotatedVars;
+
   for (auto &F : AM) {
     visitor(F);
     //Changed |= Impl.runOnFunction(F);
   }
   doWithAnnotations(&AM);
+  // Vars for new function
+  //(m_ValuesToInstrumentMap, m_AnnotatedVars, debug, m_PAG, m_PTA)
   visitAllocationCallSites(&AM);
   createMemFunction("malloc", "vvmalloc", &AM);
+  runDataFlowAnalysis(&AM, m_ValuesToInstrumentMap, m_AnnotatedVars, debug, m_PAG, m_PTA);
   //replaceMemFunction("malloc", "vvmalloc", &AM);
 
   return Changed;
